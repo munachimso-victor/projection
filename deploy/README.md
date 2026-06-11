@@ -1,41 +1,43 @@
-# Deploy (single Linux VM, e.g. OCI free tier)
+# Deploy (single Linux VM — DigitalOcean droplet)
 
 One VM runs both APIs (bound to localhost) behind **Caddy**, which serves the UI and
 proxies `/api` and `/translate`. Everything is one origin -> no CORS, no mixed content.
 
 ```
-Internet --443--> Caddy --> /            static UI (tools/lyrics_operator/ui)
-                            /api/*       127.0.0.1:8000 (lyrics-search)
-                            /translate/* 127.0.0.1:8100 (lyrics-translate)
+Internet --80/443--> Caddy --> /            static UI (tools/lyrics_operator/ui)
+                               /api/*       127.0.0.1:8000 (lyrics-search)
+                               /translate/* 127.0.0.1:8100 (lyrics-translate)
 ```
 
 The EasyWorship **import server stays on each Windows PC** (127.0.0.1:3000); it is never deployed here.
 
+This guide uses droplet IP **159.65.231.252**, clone path **/opt/projection**, and the default droplet user **root**.
+
 ---
 
-## 1. Networking / IP (OCI specifics)
+## 1. Networking / IP (DigitalOcean)
 
-1. **Reserve a public IP** and attach it to the instance VNIC (free-tier ephemeral IPs can change on stop/start). Point your DNS `A` record at it.
-2. **Open ports in TWO places** (the #1 OCI gotcha):
-   - **Security List / NSG** (console): ingress for TCP **22, 80, 443**.
-   - **Host firewall** (on the VM):
-     ```bash
-     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-     sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-     sudo netfilter-persistent save
-     ```
-3. **Hostname for HTTPS** — pick one:
-   - real domain -> `A` record to the reserved IP, or
-   - free **DuckDNS** (`yourname.duckdns.org`), or
-   - HTTP only on the bare IP (set the Caddy site to `:80`, no TLS).
+- A droplet's public IP is **already static** — it stays with the droplet. No "reserved IP"
+  needed unless you later want failover (DO's *Reserved IPs*).
+- Firewall — only act if you turned these on:
+  - **DO Cloud Firewall** (Networking → Firewalls): add inbound TCP **22, 80, 443**.
+  - **ufw** on the droplet (off by default on DO images). If active:
+    ```bash
+    sudo ufw allow 22,80,443/tcp && sudo ufw status
+    ```
+- **HTTPS needs a hostname** (Let's Encrypt won't issue certs for a bare IP). Pick one:
+  - **HTTP now (simplest):** keep Caddy site as `:80`, browse `http://159.65.231.252/`.
+  - **Free HTTPS, no DNS:** `nip.io` — use `159.65.231.252.nip.io` as the Caddy site.
+  - **Free HTTPS:** DuckDNS (`yourname.duckdns.org` → 159.65.231.252).
+  - **Your domain:** `A` record → 159.65.231.252.
 
-## 2. Install
+## 2. Install (as root)
 
 ```bash
-sudo apt update
-sudo apt install -y git python3-venv caddy
-git clone <your-repo-url> /home/ubuntu/projection
-cd /home/ubuntu/projection
+apt update
+apt install -y git python3-venv caddy
+git clone <your-repo-url> /opt/projection
+cd /opt/projection
 
 # lyrics-search
 cd services/lyrics-search
@@ -51,34 +53,43 @@ cp .env.example .env   # set GEMINI_API_KEY (same key is fine)
 ## 3. Run the APIs as services
 
 ```bash
-cd /home/ubuntu/projection
-sudo cp deploy/systemd/lyrics-search.service /etc/systemd/system/
-sudo cp deploy/systemd/lyrics-translate.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now lyrics-search lyrics-translate
+cd /opt/projection
+cp deploy/systemd/lyrics-search.service /etc/systemd/system/
+cp deploy/systemd/lyrics-translate.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now lyrics-search lyrics-translate
 systemctl status lyrics-search lyrics-translate --no-pager
 ```
 
-(Adjust `User=` and the `/home/ubuntu/projection` paths in the unit files if your VM differs.)
-
-## 4. Caddy (UI + proxy + HTTPS)
+Quick local check (before Caddy):
 
 ```bash
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-sudo nano /etc/caddy/Caddyfile      # set your hostname and UI path
-sudo systemctl reload caddy
+curl http://127.0.0.1:8000/healthz
+curl http://127.0.0.1:8100/healthz
 ```
 
-Caddy fetches/renews the TLS cert automatically once DNS points at the VM.
+## 4. Caddy (UI + proxy)
+
+```bash
+cp deploy/Caddyfile /etc/caddy/Caddyfile
+# Default is :80 (HTTP on the bare IP). To enable free HTTPS, change the first
+# line of the block from  :80  to  159.65.231.252.nip.io
+nano /etc/caddy/Caddyfile
+systemctl reload caddy
+```
+
+The Caddy `caddy` user must be able to read the UI files — `/opt/projection` is fine
+(world-readable). Don't put the repo under `/root` (mode 700; Caddy can't read it).
 
 ## 5. Verify
 
 ```bash
-curl -k https://YOUR-HOST/api/healthz
-curl -k https://YOUR-HOST/translate/healthz
+# HTTP (default :80)
+curl http://159.65.231.252/api/healthz
+curl http://159.65.231.252/translate/healthz
 ```
 
-Open `https://YOUR-HOST/` — the UI's API/Translate fields show `auto` and resolve to
+Open `http://159.65.231.252/` — the UI's API/Translate fields show `auto` and resolve to
 same-origin `/api` and `/translate` (no per-PC config needed).
 
 ## 6. Church PCs (desktop import)
@@ -86,15 +97,15 @@ same-origin `/api` and `/translate` (no per-PC config needed).
 On each Windows PC, point the desktop window at the cloud UI; import stays local:
 
 ```powershell
-$env:LYRICS_OPERATOR_UI_URL = "https://YOUR-HOST/"
+$env:LYRICS_OPERATOR_UI_URL = "http://159.65.231.252/"   # or your https host
 & "...\tools\lyrics_operator\desktop\run-desktop.ps1"
 ```
 
 ## Updating
 
 ```bash
-cd /home/ubuntu/projection && git pull
-sudo systemctl restart lyrics-search lyrics-translate   # if backend code changed
+cd /opt/projection && git pull
+systemctl restart lyrics-search lyrics-translate   # if backend code changed
 # UI changes are served immediately by Caddy (static files)
 ```
 
@@ -103,5 +114,7 @@ sudo systemctl restart lyrics-search lyrics-translate   # if backend code change
 - The UI auto-selects same-origin `/api` and `/translate` when not on localhost, so there
   is nothing to configure per environment. The header fields can still override if needed.
 - `serve_ui.py` is dev-only; in the cloud Caddy serves the UI.
-- HTTPS UI -> `http://127.0.0.1:3000` import works in Chromium/WebView2 (localhost is a
-  trusted exception). Test in the operators' browser; Safari is stricter.
+- With **HTTP** UI, the desktop import (`http://127.0.0.1:3000`) is same-scheme and works.
+  If you switch the UI to **HTTPS**, localhost import still works in Chromium/WebView2
+  (localhost is a trusted exception); Safari is stricter.
+```

@@ -6,14 +6,15 @@
 #   /api/*       -> lyrics-search   (127.0.0.1:8000)  [prefix stripped]
 #   /translate/* -> lyrics-translate (127.0.0.1:8100) [prefix stripped]
 #
-# Replace the site address below:
-#   - real domain:      app.yourchurch.org
-#   - free DuckDNS:     yourname.duckdns.org
-#   - HTTP only on IP:  replace the line with  :80  (no automatic HTTPS)
+# Site address options (pick ONE — see the first line of the block below):
+#   :80                          -> HTTP only on the bare IP (http://159.65.231.252/). Simplest.
+#   159.65.231.252.nip.io        -> free auto-HTTPS, no DNS setup (nip.io maps to your IP)
+#   yourname.duckdns.org         -> free auto-HTTPS via DuckDNS
+#   app.yourchurch.org           -> your own domain (A record -> 159.65.231.252)
 #
-# Then: sudo caddy reload --config /etc/caddy/Caddyfile   (or restart the caddy service)
+# After editing: sudo systemctl reload caddy   (or: sudo caddy reload --config /etc/caddy/Caddyfile)
 
-app.example.org {
+:80 {
     encode gzip
 
     handle_path /api/* {
@@ -25,7 +26,7 @@ app.example.org {
     }
 
     handle {
-        root * /home/ubuntu/projection/tools/lyrics_operator/ui
+        root * /opt/projection/tools/lyrics_operator/ui
         file_server
     }
 }

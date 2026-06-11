@@ -1,16 +1,16 @@
 # Install: sudo cp deploy/systemd/lyrics-search.service /etc/systemd/system/
 # Then:    sudo systemctl daemon-reload && sudo systemctl enable --now lyrics-search
-# Adjust User and the /home/ubuntu/projection paths to match your VM.
+# Adjust User and the /opt/projection paths to match your VM.
 
 [Unit]
 Description=Lyrics Search API (identify + fetch)
 After=network.target
 
 [Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/projection/services/lyrics-search
-EnvironmentFile=/home/ubuntu/projection/services/lyrics-search/.env
-ExecStart=/home/ubuntu/projection/services/lyrics-search/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+User=root
+WorkingDirectory=/opt/projection/services/lyrics-search
+EnvironmentFile=/opt/projection/services/lyrics-search/.env
+ExecStart=/opt/projection/services/lyrics-search/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=3
 

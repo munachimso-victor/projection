@@ -1,16 +1,16 @@
 # Install: sudo cp deploy/systemd/lyrics-translate.service /etc/systemd/system/
 # Then:    sudo systemctl daemon-reload && sudo systemctl enable --now lyrics-translate
-# Adjust User and the /home/ubuntu/projection paths to match your VM.
+# Adjust User and the /opt/projection paths to match your VM.
 
 [Unit]
 Description=Lyrics Translate API
 After=network.target
 
 [Service]
-User=ubuntu
-WorkingDirectory=/home/ubuntu/projection/services/lyrics-translate
-EnvironmentFile=/home/ubuntu/projection/services/lyrics-translate/.env
-ExecStart=/home/ubuntu/projection/services/lyrics-translate/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100
+User=root
+WorkingDirectory=/opt/projection/services/lyrics-translate
+EnvironmentFile=/opt/projection/services/lyrics-translate/.env
+ExecStart=/opt/projection/services/lyrics-translate/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100
 Restart=always
 RestartSec=3
 
