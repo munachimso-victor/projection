@@ -110,9 +110,13 @@ Use Python **3.10+** (`pyenv install 3.12.0; pyenv global 3.12.0`).
 
 ## Production
 
-- **UI** -> your CDN / static host.
-- **Backend** -> cloud; add the UI origin to `allow_origins` in `services/lyrics-search/app/main.py`.
-- **Desktop** -> each Windows PC, with `LYRICS_OPERATOR_UI_URL=https://your-site/.../index.html`.
+Single VM (e.g. OCI free tier) with **Caddy** serving the UI and proxying the APIs on one
+origin (`/`, `/api`, `/translate`) — so no CORS and no per-PC URL config. The UI auto-uses
+same-origin `/api` and `/translate` when not on localhost.
+
+See **`deploy/README.md`** for full steps (reserved IP, OCI firewall, Caddy, systemd).
+
+- **Desktop** -> each Windows PC, with `LYRICS_OPERATOR_UI_URL=https://your-host/`.
 
 ---
 
