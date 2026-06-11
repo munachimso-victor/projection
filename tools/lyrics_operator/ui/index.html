@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lyrics Operator</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div>
+        <h1>Lyrics Operator</h1>
+        <p class="subtitle">Identify songs from a snippet, fetch lyrics, import to EasyWorship (desktop on Windows)</p>
+      </div>
+      <div class="api-config">
+        <label for="api-base">API</label>
+        <input
+          id="api-base"
+          type="text"
+          placeholder="auto"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <span id="health-badge" class="badge badge-muted" title="Lyrics API health">…</span>
+      </div>
+      <div class="api-config">
+        <label for="translate-base">Translate</label>
+        <input
+          id="translate-base"
+          type="text"
+          placeholder="auto"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <span id="translate-badge" class="badge badge-muted" title="Translate API health">…</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel search-panel">
+        <h2>1. Paste lyric snippet</h2>
+        <textarea
+          id="snippet"
+          rows="4"
+          placeholder="e.g. I was barabbas you took upon my cross"
+        ></textarea>
+        <div class="row">
+          <label class="inline" for="max-results">Max results</label>
+          <input id="max-results" type="number" min="1" max="25" value="10" />
+          <button id="btn-identify" type="button" class="primary">Search</button>
+        </div>
+        <p id="identify-status" class="status" aria-live="polite"></p>
+
+        <h2>2. Pick a link</h2>
+        <p class="field-hint">Click a result to select it. Use <strong>Open</strong> to view the page in your browser.</p>
+        <ul id="links-list" class="links-list"></ul>
+      </section>
+
+      <section class="panel lyrics-panel">
+        <h2>3. Lyrics</h2>
+        <div class="row fetch-bar">
+          <button id="btn-fetch" type="button" class="primary" disabled>Fetch lyrics</button>
+          <a id="selected-open-url" class="open-selected hidden" href="#" target="_blank" rel="noopener"
+            >Open selected page ↗</a
+          >
+        </div>
+        <p id="selected-label" class="selected-label muted">No link selected.</p>
+        <div id="fetch-meta" class="fetch-meta hidden">
+          <div class="meta-row">
+            <strong id="song-title"></strong>
+            <span id="song-author" class="muted"></span>
+          </div>
+          <div class="meta-row">
+            <span id="provenance-badge" class="badge"></span>
+            <a id="open-url" href="#" target="_blank" rel="noopener">Open page</a>
+          </div>
+        </div>
+        <p id="fetch-status" class="status" aria-live="polite"></p>
+        <pre id="lyrics-output" class="lyrics-output empty">Select a link, then click Fetch lyrics.</pre>
+        <div id="fetch-actions" class="actions hidden">
+          <button id="btn-copy" type="button">Copy lyrics</button>
+          <button id="btn-download" type="button">Download .txt</button>
+          <button id="btn-translate" type="button">Translate</button>
+          <button id="btn-import" type="button" class="primary hidden">Import to EasyWorship</button>
+        </div>
+        <p id="hint-desktop" class="hint hidden">
+          After import, use <strong>Refresh</strong> in EasyWorship. See
+          <code>tools/ew_song_writer/README.md</code>.
+        </p>
+        <p id="hint-cli" class="hint">
+          On Windows (browser mode): run
+          <code>python tools/ew_song_writer/songimport.py "path\to\song.txt" --title "…" --author "…"</code>
+          or use the desktop app for one-click import.
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js?v=9" type="module"></script>
+  </body>
+</html>
