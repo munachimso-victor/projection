@@ -1,0 +1,31 @@
+# Caddy front door for the projection app (single VM).
+#
+# One origin serves everything, so the UI uses same-origin paths and there is no
+# CORS or mixed-content to manage:
+#   /            -> static UI (tools/lyrics_operator/ui)
+#   /api/*       -> lyrics-search   (127.0.0.1:8000)  [prefix stripped]
+#   /translate/* -> lyrics-translate (127.0.0.1:8100) [prefix stripped]
+#
+# Replace the site address below:
+#   - real domain:      app.yourchurch.org
+#   - free DuckDNS:     yourname.duckdns.org
+#   - HTTP only on IP:  replace the line with  :80  (no automatic HTTPS)
+#
+# Then: sudo caddy reload --config /etc/caddy/Caddyfile   (or restart the caddy service)
+
+app.example.org {
+    encode gzip
+
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    handle_path /translate/* {
+        reverse_proxy 127.0.0.1:8100
+    }
+
+    handle {
+        root * /home/ubuntu/projection/tools/lyrics_operator/ui
+        file_server
+    }
+}
