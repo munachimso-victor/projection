@@ -61,15 +61,68 @@ def _html_to_text(html: str) -> str:
     return text.strip()
 
 
-def _fetch_page_text(url: str) -> str:
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
+
+
+# Free reader proxy that fetches the page from its own IPs and returns clean text.
+# Used as a fallback when a direct fetch is blocked (e.g. Cloudflare 403 on
+# datacenter/cloud IP ranges, which affects Genius, Musixmatch, etc.).
+_READER_PROXY = "https://r.jina.ai/"
+
+
+def _fetch_direct(url: str) -> str:
     with httpx.Client(
         follow_redirects=True,
         timeout=20.0,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; LyricsSearch/1.0)"},
+        headers=_BROWSER_HEADERS,
     ) as client:
         response = client.get(url)
         response.raise_for_status()
     return _html_to_text(response.text)
+
+
+def _fetch_via_reader(url: str) -> str:
+    # r.jina.ai returns ready-to-use markdown/plain text, so no HTML parsing needed.
+    with httpx.Client(follow_redirects=True, timeout=30.0) as client:
+        response = client.get(
+            _READER_PROXY + url,
+            headers={"User-Agent": _BROWSER_HEADERS["User-Agent"]},
+        )
+        response.raise_for_status()
+    return (response.text or "").strip()
+
+
+def _fetch_page_text(url: str) -> str:
+    try:
+        return _fetch_direct(url)
+    except Exception as direct_exc:
+        try:
+            text = _fetch_via_reader(url)
+        except Exception as reader_exc:
+            raise RuntimeError(
+                f"direct_failed: {direct_exc}; reader_failed: {reader_exc}"
+            ) from reader_exc
+        if not text:
+            raise RuntimeError(f"direct_failed: {direct_exc}; reader_empty") from direct_exc
+        return text
 
 
 def fetch_lyrics_from_url(url: str, settings: Settings) -> UrlExtractResult | UrlExtractFailure:
