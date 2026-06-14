@@ -110,19 +110,57 @@ def _fetch_via_reader(url: str) -> str:
     return (response.text or "").strip()
 
 
+_BLOCK_MARKERS = (
+    "are you a robot",
+    "are you human",
+    "verifying you are human",
+    "captcha",
+    "enable javascript",
+    "access denied",
+    "request blocked",
+    "just a moment",
+    "cloudflare",
+    "ddos protection",
+    "unusual traffic",
+)
+
+
+def _looks_blocked(text: str) -> bool:
+    # A real lyrics page is thousands of chars; bot walls/captcha pages are tiny.
+    if len(text.strip()) < 500:
+        return True
+    low = text.lower()
+    return any(marker in low for marker in _BLOCK_MARKERS)
+
+
 def _fetch_page_text(url: str) -> str:
+    direct_text = ""
+    direct_exc: Exception | None = None
     try:
-        return _fetch_direct(url)
-    except Exception as direct_exc:
-        try:
-            text = _fetch_via_reader(url)
-        except Exception as reader_exc:
-            raise RuntimeError(
-                f"direct_failed: {direct_exc}; reader_failed: {reader_exc}"
-            ) from reader_exc
-        if not text:
-            raise RuntimeError(f"direct_failed: {direct_exc}; reader_empty") from direct_exc
-        return text
+        direct_text = _fetch_direct(url)
+    except Exception as exc:
+        direct_exc = exc
+
+    # Use the direct result only if it looks like a real page (not a 200 OK
+    # captcha/bot wall, e.g. AZLyrics, which would otherwise skip the proxy).
+    if direct_text and not _looks_blocked(direct_text):
+        return direct_text
+
+    try:
+        reader_text = _fetch_via_reader(url)
+    except Exception as reader_exc:
+        if direct_text:
+            return direct_text  # nothing better available; let Gemini try
+        raise RuntimeError(
+            f"direct_failed: {direct_exc}; reader_failed: {reader_exc}"
+        ) from reader_exc
+
+    # Prefer whichever source gave us more usable text.
+    if reader_text and (not direct_text or len(reader_text) > len(direct_text)):
+        return reader_text
+    if direct_text:
+        return direct_text
+    raise RuntimeError(f"direct_failed: {direct_exc}; reader_empty")
 
 
 def fetch_lyrics_from_url(url: str, settings: Settings) -> UrlExtractResult | UrlExtractFailure:

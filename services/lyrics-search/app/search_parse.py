@@ -70,18 +70,29 @@ def should_skip_url(url: str) -> bool:
     return False
 
 
+# Well-known, high-quality lyric sources we surface first. They can be bot-walled
+# on a direct fetch, but the reader-proxy fallback recovers them.
+_PREFERRED_HOSTS = frozenset({"azlyrics.com", "musixmatch.com"})
+
+# Genius is the only true dead end from a cloud server: direct fetch is blocked
+# (403) and the reader proxy refuses it (HTTP 451), so it cannot be fetched at
+# all. It is pinned last as a true last resort.
+_DEPRIORITIZED_HOSTS = frozenset({"genius.com"})
+
+
 def host_sort_key(url: str, search_rank: int) -> tuple[int, int]:
     """
-    Lower sort key = earlier in results. AZLyrics and Genius first, then other
-    lyric hosts, preserving DuckDuckGo order within each tier.
+    Lower sort key = earlier in results. Preferred well-known sources first, then
+    other lyric hosts, then Genius last (unfetchable from the cloud), preserving
+    DuckDuckGo order within each tier.
     """
     host = _host(url)
-    if "azlyrics.com" in host:
-        tier = 0
-    elif host == "genius.com":
-        tier = 1
-    elif host in LYRIC_HOSTS:
-        tier = 2
-    else:
+    if host in _DEPRIORITIZED_HOSTS:
         tier = 3
+    elif "azlyrics.com" in host or host in _PREFERRED_HOSTS:
+        tier = 0
+    elif host in LYRIC_HOSTS:
+        tier = 1
+    else:
+        tier = 2
     return tier, search_rank
