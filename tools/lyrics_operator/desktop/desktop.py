@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Lyrics Operator desktop: UI from URL (cloud or local) + local import only.
 
-  set LYRICS_OPERATOR_UI_URL=https://your-cdn.example.org/lyrics-operator/index.html
   python desktop.py
 
-Local dev default UI: http://127.0.0.1:3001/ (run serve_ui.py in another terminal).
+Default UI: http://159.65.231.252/ (cloud). Local dev:
+  set LYRICS_OPERATOR_UI_URL=http://127.0.0.1:3001/
+  python desktop.py
 """
 
 from __future__ import annotations
@@ -17,7 +18,6 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from import_server import LOCAL_IMPORT_BASE, run_import_server
-from serve_ui import UI_BASE
 
 if sys.platform != "win32":
     print("desktop.py is for Windows only (EasyWorship + native window).")
@@ -33,7 +33,14 @@ except ImportError:
     print("  pip install -r requirements-desktop.txt")
     sys.exit(1)
 
-DEFAULT_UI_URL = os.environ.get("LYRICS_OPERATOR_UI_URL", f"{UI_BASE}/").strip() or f"{UI_BASE}/"
+# Production UI served by Caddy on the droplet. Override with LYRICS_OPERATOR_UI_URL
+# for local dev (e.g. http://127.0.0.1:3001/ while serve_ui.py is running).
+PRODUCTION_UI_URL = "http://159.65.231.252/"
+
+DEFAULT_UI_URL = (
+    os.environ.get("LYRICS_OPERATOR_UI_URL", PRODUCTION_UI_URL).strip()
+    or PRODUCTION_UI_URL
+)
 
 
 def ui_url_with_local_import(ui_url: str, local_import: str) -> str:
@@ -89,7 +96,7 @@ def main() -> None:
     print("Lyrics Operator desktop")
     print(f"  UI:            {ui_url}")
     print(f"  Local import:  {LOCAL_IMPORT_BASE}")
-    print("  Lyrics API:    set in the UI (default http://localhost:8000)")
+    print("  Lyrics API:    set in the UI (auto /api on cloud; localhost:8000 for local dev)")
 
     webview.create_window(
         "Lyrics Operator",

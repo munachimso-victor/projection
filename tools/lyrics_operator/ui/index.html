@@ -10,7 +10,7 @@
     <header class="header">
       <div>
         <h1>Lyrics Operator</h1>
-        <p class="subtitle">Identify songs from a snippet, fetch lyrics, import to EasyWorship (desktop on Windows)</p>
+        <p class="subtitle">Search from a snippet, paste full lyrics, translate, import to EasyWorship (desktop on Windows)</p>
       </div>
       <div class="api-config">
         <label for="api-base">API</label>
@@ -38,22 +38,51 @@
 
     <main class="layout">
       <section class="panel search-panel">
-        <h2>1. Paste lyric snippet</h2>
-        <textarea
-          id="snippet"
-          rows="4"
-          placeholder="e.g. I was barabbas you took upon my cross"
-        ></textarea>
-        <div class="row">
-          <label class="inline" for="max-results">Max results</label>
-          <input id="max-results" type="number" min="1" max="25" value="10" />
-          <button id="btn-identify" type="button" class="primary">Search</button>
+        <div class="mode-tabs" role="tablist" aria-label="Input mode">
+          <button id="mode-search" type="button" class="mode-tab active" role="tab" aria-selected="true">
+            Search snippet
+          </button>
+          <button id="mode-paste" type="button" class="mode-tab" role="tab" aria-selected="false">
+            Paste lyrics
+          </button>
         </div>
-        <p id="identify-status" class="status" aria-live="polite"></p>
 
-        <h2>2. Pick a link</h2>
-        <p class="field-hint">Click a result to select it. Use <strong>Open</strong> to view the page in your browser.</p>
-        <ul id="links-list" class="links-list"></ul>
+        <div id="search-flow">
+          <h2>1. Paste lyric snippet</h2>
+          <textarea
+            id="snippet"
+            rows="4"
+            placeholder="e.g. I was barabbas you took upon my cross"
+          ></textarea>
+          <div class="row">
+            <label class="inline" for="max-results">Max results</label>
+            <input id="max-results" type="number" min="1" max="25" value="10" />
+            <button id="btn-identify" type="button" class="primary">Search</button>
+          </div>
+          <p id="identify-status" class="status" aria-live="polite"></p>
+
+          <h2>2. Pick a link</h2>
+          <p class="field-hint">Click a result to select it. Use <strong>Open</strong> to view the page in your browser.</p>
+          <ul id="links-list" class="links-list"></ul>
+        </div>
+
+        <div id="paste-flow" class="hidden">
+          <h2>Paste full lyrics</h2>
+          <p class="field-hint">Skip search and fetch. Load lyrics here, then use <strong>Translate</strong> on the right.</p>
+          <label class="inline" for="paste-title">Title (optional)</label>
+          <input id="paste-title" type="text" class="text-field" placeholder="Song title" spellcheck="false" />
+          <label class="inline" for="paste-author">Artist (optional)</label>
+          <input id="paste-author" type="text" class="text-field" placeholder="Artist / author" spellcheck="false" />
+          <textarea
+            id="paste-lyrics"
+            rows="14"
+            placeholder="Paste the full song lyrics here…"
+          ></textarea>
+          <div class="row">
+            <button id="btn-load-paste" type="button" class="primary">Load lyrics</button>
+          </div>
+          <p id="paste-status" class="status" aria-live="polite"></p>
+        </div>
       </section>
 
       <section class="panel lyrics-panel">
@@ -95,6 +124,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=9" type="module"></script>
+    <script src="app.js?v=10" type="module"></script>
   </body>
 </html>

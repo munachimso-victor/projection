@@ -92,6 +92,45 @@ h2 {
   }
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.mode-tab.active {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.text-field {
+  display: block;
+  width: 100%;
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+#paste-flow label.inline {
+  display: block;
+  margin-top: 0.25rem;
+}
+
 .panel {
   padding: 1.25rem 1.5rem;
   background: var(--bg);

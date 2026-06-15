@@ -74,13 +74,31 @@ The **Translate** button inserts an English line under each non-English line and
 
 `desktop.py` opens the UI in a window and runs the import server on `:3000`.
 
-It defaults to the local UI at `http://127.0.0.1:3001/`, so for local use you don't set anything. Only set `LYRICS_OPERATOR_UI_URL` to point at a different UI (e.g. your cloud URL in production).
+**Production default:** the app loads the cloud UI at `http://159.65.231.252/` (API/Translate
+auto-resolve to `/api` and `/translate` on that host). Override with `LYRICS_OPERATOR_UI_URL`
+for local dev (`http://127.0.0.1:3001/` while `serve_ui.py` is running).
 
-**Run from source** (`run-desktop.ps1`, handles `\\wsl$\` paths):
+### Do you need to rebuild the exe?
 
-PowerShell (prompt shows `PS C:\...>`):
+| Change | Rebuild needed? |
+|--------|-----------------|
+| Backend fetch/ranking fixes on the droplet | **No** — server-side only; restart `lyrics-search` on the droplet |
+| UI changes served from the cloud (`http://159.65.231.252/`) | **No** — desktop loads the live UI from the server |
+| Import server / `desktop.py` / bundled local UI | **Yes** — rebuild the exe |
+
+If you already have an exe, you can keep using it with:
 
 ```powershell
+$env:LYRICS_OPERATOR_UI_URL = "http://159.65.231.252/"
+& "$env:USERPROFILE\projection\tools\lyrics_operator\desktop\dist\LyricsOperator\LyricsOperator.exe"
+```
+
+After rebuilding once (below), double-clicking the exe uses the cloud URL by default — no env var.
+
+**Run from source** (`run-desktop.ps1`, handles `\\wsl$\` paths). Defaults to local UI for dev:
+
+```powershell
+$env:LYRICS_OPERATOR_UI_URL = "http://127.0.0.1:3001/"   # optional; omit to use cloud default
 & "\\wsl$\Ubuntu\home\mvn27adm\projection\tools\lyrics_operator\desktop\run-desktop.ps1"
 ```
 
@@ -98,7 +116,7 @@ powershell -ExecutionPolicy Bypass -File "\\wsl$\Ubuntu\home\mvn27adm\projection
 
 Output: `%USERPROFILE%\projection\tools\lyrics_operator\desktop\dist\LyricsOperator\LyricsOperator.exe`
 
-**Run the exe** (with UI on :3001 and API on :8000):
+**Run the exe** (cloud UI + local import; no env var after rebuild):
 
 ```powershell
 & "$env:USERPROFILE\projection\tools\lyrics_operator\desktop\dist\LyricsOperator\LyricsOperator.exe"
@@ -116,7 +134,7 @@ same-origin `/api` and `/translate` when not on localhost.
 
 See **`deploy/README.md`** for full steps (reserved IP, OCI firewall, Caddy, systemd).
 
-- **Desktop** -> each Windows PC, with `LYRICS_OPERATOR_UI_URL=https://your-host/`.
+- **Desktop** -> each Windows PC. Default UI: `http://159.65.231.252/` (rebuild exe once, or set `LYRICS_OPERATOR_UI_URL`).
 
 ---
 

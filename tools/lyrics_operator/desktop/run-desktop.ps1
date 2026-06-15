@@ -9,7 +9,7 @@ if (-not (Test-Path (Join-Path $OperatorDir "desktop.py"))) {
 }
 
 if (-not $env:LYRICS_OPERATOR_UI_URL) {
-    $env:LYRICS_OPERATOR_UI_URL = "http://127.0.0.1:3001/"
+    Write-Host "UI: cloud default (http://159.65.231.252/). For local dev: `$env:LYRICS_OPERATOR_UI_URL = 'http://127.0.0.1:3001/'"
 }
 
 if ($OperatorDir -match '^\\\\') {

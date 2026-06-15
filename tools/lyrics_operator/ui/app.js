@@ -8,6 +8,7 @@ let selectedLink = null;
 let lastFetch = null;
 let ewImportAvailable = false;
 let translatedActive = false;
+let inputMode = "search";
 
 function initLocalImportFromQuery() {
   const q = new URLSearchParams(location.search).get("localImport");
@@ -243,8 +244,92 @@ async function runIdentify() {
   }
 }
 
+function setLyricsMeta(title, author, provenance, url) {
+  $("song-title").textContent = title || "Unknown Title";
+  $("song-author").textContent = author ? `· ${author}` : "";
+  const badge = $("provenance-badge");
+  badge.textContent = provenanceLabel(provenance);
+  badge.className = provenance?.fallback_used ? "badge badge-warn" : "badge badge-ok";
+  const openUrl = $("open-url");
+  if (url) {
+    openUrl.href = url;
+    openUrl.classList.remove("hidden");
+  } else {
+    openUrl.href = "#";
+    openUrl.classList.add("hidden");
+  }
+}
+
+function showLoadedLyrics(message) {
+  renderLyrics();
+  $("fetch-meta").classList.remove("hidden");
+  $("fetch-actions").classList.remove("hidden");
+  const status = $("fetch-status");
+  status.textContent = message;
+  status.className = "status ok";
+}
+
+function setInputMode(mode) {
+  inputMode = mode === "paste" ? "paste" : "search";
+  const searchFlow = $("search-flow");
+  const pasteFlow = $("paste-flow");
+  const tabSearch = $("mode-search");
+  const tabPaste = $("mode-paste");
+  const isSearch = inputMode === "search";
+
+  searchFlow.classList.toggle("hidden", !isSearch);
+  pasteFlow.classList.toggle("hidden", isSearch);
+  tabSearch.classList.toggle("active", isSearch);
+  tabPaste.classList.toggle("active", !isSearch);
+  tabSearch.setAttribute("aria-selected", String(isSearch));
+  tabPaste.setAttribute("aria-selected", String(!isSearch));
+
+  if (isSearch) {
+    resetLyricsPanel("Select a link, then click Fetch lyrics.");
+  } else {
+    resetLyricsPanel("Paste lyrics on the left, then click Load lyrics.");
+  }
+  document.querySelector(".fetch-bar")?.classList.toggle("hidden", !isSearch);
+  $("selected-label")?.classList.toggle("hidden", !isSearch);
+}
+
+async function loadPastedLyrics() {
+  const lyrics = $("paste-lyrics").value.trim();
+  const title = $("paste-title").value.trim();
+  const author = $("paste-author").value.trim();
+  const status = $("paste-status");
+  const btn = $("btn-load-paste");
+
+  if (lyrics.length < 2) {
+    status.textContent = "Enter at least 2 characters of lyrics.";
+    status.className = "status error";
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = "Loading…";
+  status.className = "status";
+
+  lastFetch = {
+    title: title || "Unknown Title",
+    author,
+    lyrics_plain: lyrics,
+    lyrics_translated: null,
+    url: null,
+    provenance: { source: "pasted", fallback_used: false },
+  };
+  translatedActive = false;
+  setLyricsMeta(lastFetch.title, lastFetch.author, lastFetch.provenance, null);
+  showLoadedLyrics("Lyrics loaded. Click Translate to send them to the translate service.");
+  await checkLocalCapabilities();
+  status.textContent = "Loaded.";
+  status.className = "status ok";
+  btn.disabled = false;
+}
+
 function resetLyricsPanel(message) {
   lastFetch = null;
+  translatedActive = false;
   $("fetch-meta").classList.add("hidden");
   $("fetch-actions").classList.add("hidden");
   const out = $("lyrics-output");
@@ -270,20 +355,13 @@ async function fetchLyrics(url) {
     const data = await apiPost("/v1/lyrics/fetch", { url });
     lastFetch = { ...data, url, lyrics_translated: null };
     translatedActive = false;
-    $("song-title").textContent = data.title || "Unknown Title";
-    $("song-author").textContent = data.author ? `· ${data.author}` : "";
-    const badge = $("provenance-badge");
-    badge.textContent = provenanceLabel(data.provenance);
-    badge.className = data.provenance?.fallback_used ? "badge badge-warn" : "badge badge-ok";
-    $("open-url").href = url;
-    renderLyrics();
-    $("fetch-meta").classList.remove("hidden");
-    $("fetch-actions").classList.remove("hidden");
+    setLyricsMeta(data.title, data.author, data.provenance, url);
     await checkLocalCapabilities();
-    status.textContent = ewImportAvailable
-      ? "Lyrics loaded. Review before importing to EasyWorship."
-      : "Lyrics loaded. Use copy/download, or run import on Windows (desktop.py).";
-    status.className = "status ok";
+    showLoadedLyrics(
+      ewImportAvailable
+        ? "Lyrics loaded. Review before importing to EasyWorship."
+        : "Lyrics loaded. Use copy/download, or run import on Windows (desktop.py)."
+    );
   } catch (err) {
     status.textContent = err.message;
     status.className = "status error";
@@ -538,6 +616,15 @@ function init() {
   });
 
   $("btn-identify").addEventListener("click", runIdentify);
+  $("mode-search").addEventListener("click", () => setInputMode("search"));
+  $("mode-paste").addEventListener("click", () => setInputMode("paste"));
+  $("btn-load-paste").addEventListener("click", loadPastedLyrics);
+  $("paste-lyrics").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      loadPastedLyrics();
+    }
+  });
   $("snippet").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
