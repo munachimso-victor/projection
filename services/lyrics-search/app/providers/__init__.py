@@ -1,1 +1,1 @@
-"""External providers: Gemini (identify + lyrics fallback), AZLyrics via azapi."""
+"""External providers: DuckDuckGo identify, Gemini page extract, Genius (optional)."""

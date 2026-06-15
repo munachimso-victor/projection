@@ -3,7 +3,7 @@
 HTTP API for the projection tool:
 
 1. **Identify** — lyric snippet → links from lyric websites (AZLyrics/Genius first)
-2. **Fetch lyrics** — URL from identify → azapi (AZ), lyricsgenius (Genius), or Gemini page extract (other lyric sites)
+2. **Fetch lyrics** — URL from identify → Gemini page extract (direct + reader proxy); Genius URLs optionally try lyricsgenius first
 
 EasyWorship import stays in `tools/ew_song_writer/songimport.py` on Windows.
 
@@ -59,7 +59,7 @@ curl -s -X POST http://localhost:8000/v1/lyrics/fetch \
   -d '{"url": "https://www.azlyrics.com/lyrics/josiahqueen/iambarabbas.html"}' | jq
 ```
 
-On failure, the API returns **502** with `source` and `error`. AZ and Genius may fall back to `gemini_url_extract` on the same URL.
+On failure, the API returns **502** with `source` and `error`. Genius may fall back to `gemini_url_extract` on the same URL. AZLyrics and other sites use Gemini extract directly (no azapi).
 
 ## Project layout
 
@@ -74,7 +74,6 @@ services/lyrics-search/
       identify_pipeline.py
       duckduckgo_identify.py
       fetch_pipeline.py
-      azlyrics.py
       genius_lyrics.py
       gemini_url_extract.py
   requirements.txt
@@ -83,7 +82,6 @@ services/lyrics-search/
 
 ## Notes
 
-- `GENIUS_ACCESS_TOKEN` — [Genius API client](https://genius.com/api-clients) for Genius links on fetch.
-- `GEMINI_API_KEY` — other lyric-site fetch (URL extract) and fallback when AZ/Genius fail.
-- azapi scrapes AZLyrics; use delays and expect occasional failures.
+- `GENIUS_ACCESS_TOKEN` — optional; [Genius API client](https://genius.com/api-clients) for Genius links on fetch (often blocked from cloud servers).
+- `GEMINI_API_KEY` — required for fetch: page extract via direct fetch + reader proxy fallback.
 - Always preview lyrics in the client before calling `songimport.py`.

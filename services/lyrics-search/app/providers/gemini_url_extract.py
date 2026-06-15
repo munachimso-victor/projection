@@ -112,8 +112,11 @@ def _fetch_via_reader(url: str) -> str:
 
 _BLOCK_MARKERS = (
     "are you a robot",
+    "not a robot",
     "are you human",
     "verifying you are human",
+    "unusual activity",
+    "type the characters from the picture",
     "captcha",
     "enable javascript",
     "access denied",

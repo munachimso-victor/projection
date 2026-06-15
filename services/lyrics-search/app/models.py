@@ -35,7 +35,7 @@ class Provenance(BaseModel):
     fallback_used: bool = False
     primary_error: Optional[str] = Field(
         default=None,
-        description="Error from azlyrics or genius when fallback_used is true.",
+        description="Error from genius when fallback_used is true.",
     )
 
 

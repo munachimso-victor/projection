@@ -126,11 +126,10 @@ curl -s -X POST http://localhost:8000/v1/lyrics/fetch \
 
 Check `provenance.source`:
 
-- `azlyrics` — AZLyrics URL
-- `genius_lyricsgenius` — Genius URL
-- `gemini_url_extract` — other lyric sites (Gemini extracts from page HTML)
+- `genius_lyricsgenius` — Genius URL (when Genius scrape works)
+- `gemini_url_extract` — all other lyric sites, including AZLyrics (Gemini extracts from page text)
 
-On failure you get **502** with `source` and `error`. AZ and Genius links may fall back to `gemini_url_extract` on the same URL (`fallback_used: true`, `primary_error` set); if both fail, the response includes `primary_source`, `primary_error`, and the extract error.
+On failure you get **502** with `source` and `error`. Genius links may fall back to `gemini_url_extract` on the same URL (`fallback_used: true`, `primary_error` set).
 
 ---
 
@@ -160,10 +159,10 @@ After fetch returns `lyrics_plain`:
 | Problem | What to do |
 |---------|------------|
 | Empty identify results | Check internet; try a longer snippet |
-| `502` on identify | Transient search/azapi failure — retry |
-| `502` on fetch | AZ failed; set `GEMINI_API_KEY` for lyrics fallback |
+| `502` on identify | Transient DuckDuckGo search failure — retry |
+| `502` on fetch | Page blocked or no lyrics found; try another link or paste lyrics in the UI |
 | Connection refused | Uvicorn not running on port 8000 |
-| azapi slow / fails | Normal occasionally; lyrics fallback uses Gemini if key is set |
+| AZLyrics / Genius fail from cloud | Expected on datacenter IP; prefer lyrics.com or paste-full-lyrics mode |
 
 ---
 

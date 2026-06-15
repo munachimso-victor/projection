@@ -18,7 +18,7 @@ from app.providers.fetch_pipeline import fetch_lyrics as fetch_lyrics_pipeline
 
 app = FastAPI(
     title="Lyrics Search",
-    description="v1: identify links, fetch by URL (AZ / Genius / Gemini extract)",
+    description="v1: identify links, fetch by URL (Gemini page extract; Genius optional)",
     version="0.3.0",
 )
 
