@@ -9,7 +9,10 @@ from app.providers.gemini_translate import (
     TranslateFailure,
     translate_lines,
 )
-from app.slides import pack_units, split_segments
+from app.slides import pack_units, split_stanzas
+
+# Stanzas come from split_stanzas (blank lines or section labels; labels stripped).
+# See slides.py for the planned EasyWorship label-slide workflow.
 
 
 @dataclass(frozen=True)
@@ -30,8 +33,8 @@ def translate_lyrics(
     settings: Settings,
     target_lang: str,
 ) -> TranslateResult | TranslateFailure:
-    segments = split_segments(lyrics_plain)
-    content_lines = [line for segment in segments for line in segment]
+    stanzas = split_stanzas(lyrics_plain)
+    content_lines = [line for stanza in stanzas for line in stanza]
     if not content_lines:
         return TranslateResult(lyrics_translated="", lines_translated=0)
 
@@ -43,15 +46,17 @@ def translate_lyrics(
     slides: List[str] = []
     translated_count = 0
     idx = 0
-    for segment in segments:
+
+    for stanza in stanzas:
         units: List[List[str]] = []
-        for line in segment:
+        for line in stanza:
             lt = translations[idx]
             idx += 1
             unit = _unit_for(line, lt)
             if len(unit) == 2:
                 translated_count += 1
             units.append(unit)
+
         slides.extend(pack_units(units, max_lines))
 
     return TranslateResult(

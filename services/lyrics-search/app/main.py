@@ -6,12 +6,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.lyrics_spacing import normalize_slide_spacing
 from app.models import (
     FetchLyricsRequest,
     FetchLyricsResponse,
     HealthResponse,
     IdentifyRequest,
     IdentifyResponse,
+    NormalizeLyricsRequest,
+    NormalizeLyricsResponse,
 )
 from app.providers import identify_pipeline
 from app.providers.fetch_pipeline import fetch_lyrics as fetch_lyrics_pipeline
@@ -70,3 +73,10 @@ def fetch_lyrics(body: FetchLyricsRequest) -> FetchLyricsResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"fetch failed: {exc}") from exc
+
+
+@app.post("/v1/lyrics/normalize", response_model=NormalizeLyricsResponse)
+def normalize_lyrics(body: NormalizeLyricsRequest) -> NormalizeLyricsResponse:
+    return NormalizeLyricsResponse(
+        lyrics_plain=normalize_slide_spacing(body.lyrics_plain),
+    )

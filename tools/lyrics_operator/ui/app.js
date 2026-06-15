@@ -307,24 +307,35 @@ async function loadPastedLyrics() {
   }
 
   btn.disabled = true;
-  status.textContent = "Loading…";
+  status.textContent = "Formatting for projection…";
   status.className = "status";
 
-  lastFetch = {
-    title: title || "Unknown Title",
-    author,
-    lyrics_plain: lyrics,
-    lyrics_translated: null,
-    url: null,
-    provenance: { source: "pasted", fallback_used: false },
-  };
-  translatedActive = false;
-  setLyricsMeta(lastFetch.title, lastFetch.author, lastFetch.provenance, null);
-  showLoadedLyrics("Lyrics loaded. Click Translate to send them to the translate service.");
-  await checkLocalCapabilities();
-  status.textContent = "Loaded.";
-  status.className = "status ok";
-  btn.disabled = false;
+  try {
+    saveApiBase();
+    const data = await apiPost("/v1/lyrics/normalize", { lyrics_plain: lyrics });
+    const normalized = data.lyrics_plain || lyrics;
+
+    lastFetch = {
+      title: title || "Unknown Title",
+      author,
+      lyrics_plain: normalized,
+      lyrics_translated: null,
+      url: null,
+      provenance: { source: "pasted", fallback_used: false },
+    };
+    translatedActive = false;
+    $("paste-lyrics").value = normalized;
+    setLyricsMeta(lastFetch.title, lastFetch.author, lastFetch.provenance, null);
+    showLoadedLyrics("Lyrics loaded and formatted. Click Translate if needed.");
+    await checkLocalCapabilities();
+    status.textContent = "Loaded.";
+    status.className = "status ok";
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = "status error";
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function resetLyricsPanel(message) {

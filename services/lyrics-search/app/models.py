@@ -30,6 +30,14 @@ class FetchLyricsRequest(BaseModel):
     url: str = Field(..., min_length=8, description="Lyric page URL from identify.")
 
 
+class NormalizeLyricsRequest(BaseModel):
+    lyrics_plain: str = Field(..., min_length=1, max_length=20000)
+
+
+class NormalizeLyricsResponse(BaseModel):
+    lyrics_plain: str
+
+
 class Provenance(BaseModel):
     source: str
     fallback_used: bool = False
