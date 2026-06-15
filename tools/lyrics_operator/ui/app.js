@@ -1,12 +1,14 @@
 const STORAGE_KEY = "lyrics_operator_api_base";
 const TRANSLATE_KEY = "lyrics_operator_translate_base";
 const LOCAL_IMPORT_KEY = "lyrics_operator_local_import";
+const EW_DATA_KEY = "lyrics_operator_ew_data_dir";
 
 const $ = (id) => document.getElementById(id);
 
 let selectedLink = null;
 let lastFetch = null;
 let ewImportAvailable = false;
+let ewDefaultDataDir = "";
 let translatedActive = false;
 let inputMode = "search";
 
@@ -466,17 +468,92 @@ async function copyLyrics() {
 function setImportUi(available) {
   ewImportAvailable = available;
   const btn = $("btn-import");
+  const ewConfig = $("ew-config");
   if (available) {
     btn.classList.remove("hidden");
     btn.disabled = false;
+    ewConfig.classList.remove("hidden");
     $("hint-desktop").classList.remove("hidden");
     $("hint-cli").classList.add("hidden");
   } else {
     btn.classList.add("hidden");
     btn.disabled = true;
+    ewConfig.classList.add("hidden");
     $("hint-desktop").classList.add("hidden");
     $("hint-cli").classList.remove("hidden");
   }
+}
+
+function savedEwDataDir() {
+  return (localStorage.getItem(EW_DATA_KEY) || "").trim();
+}
+
+function effectiveEwDataDir() {
+  const saved = savedEwDataDir();
+  return saved || ewDefaultDataDir;
+}
+
+function saveEwDataDir(path) {
+  const trimmed = (path || "").trim();
+  if (trimmed) {
+    localStorage.setItem(EW_DATA_KEY, trimmed);
+  } else {
+    localStorage.removeItem(EW_DATA_KEY);
+  }
+  $("ew-data-dir").value = trimmed;
+}
+
+function updateEwDataBadge(valid, message) {
+  const badge = $("ew-data-badge");
+  if (valid) {
+    badge.textContent = "ok";
+    badge.className = "badge badge-ok";
+    badge.title = "Songs.db and SongWords.db found";
+  } else {
+    badge.textContent = "invalid";
+    badge.className = "badge badge-warn";
+    badge.title = message || "Invalid EasyWorship data folder";
+  }
+}
+
+async function checkEwDataDir() {
+  const badge = $("ew-data-badge");
+  badge.textContent = "…";
+  badge.className = "badge badge-muted";
+  const dir = effectiveEwDataDir();
+  if (!dir) {
+    updateEwDataBadge(false, "No EasyWorship data directory configured.");
+    return;
+  }
+  $("ew-data-dir").value = savedEwDataDir();
+  $("ew-data-dir").placeholder = ewDefaultDataDir ? `default: ${ewDefaultDataDir}` : "default";
+  try {
+    const q = new URLSearchParams({ ew_data_dir: dir });
+    const res = await fetch(`${localImportUrl("/local/capabilities")}?${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    updateEwDataBadge(Boolean(data.ew_data_dir_valid), data.ew_data_dir_message || "");
+  } catch (err) {
+    updateEwDataBadge(false, String(err.message || err));
+  }
+}
+
+async function browseEwDataDir() {
+  const api = desktopApi();
+  if (!api?.pick_folder) {
+    alert("Folder browse is only available in the desktop app.");
+    return;
+  }
+  const result = await api.pick_folder();
+  if (!result?.ok) return;
+  if (result.cancelled) return;
+  saveEwDataDir(result.path || "");
+  await checkEwDataDir();
+}
+
+function resetEwDataDir() {
+  saveEwDataDir("");
+  checkEwDataDir();
 }
 
 async function checkLocalCapabilities() {
@@ -495,6 +572,14 @@ async function checkLocalCapabilities() {
     }
     const data = await res.json();
     setImportUi(Boolean(data.easyworship_import));
+    if (data.easyworship_import) {
+      ewDefaultDataDir = data.default_ew_data_dir || "";
+      $("ew-data-dir").value = savedEwDataDir();
+      $("ew-data-dir").placeholder = ewDefaultDataDir
+        ? `default: ${ewDefaultDataDir}`
+        : "default";
+      await checkEwDataDir();
+    }
   } catch {
     setImportUi(false);
   }
@@ -519,6 +604,7 @@ async function importToEasyWorship() {
         lyrics_plain: lyrics,
         title: lastFetch.title || "",
         author: lastFetch.author || "",
+        ew_data_dir: effectiveEwDataDir(),
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -649,6 +735,8 @@ function init() {
   $("btn-download").addEventListener("click", downloadEwFile);
   $("btn-translate").addEventListener("click", translateLyrics);
   $("btn-import").addEventListener("click", importToEasyWorship);
+  $("btn-ew-browse").addEventListener("click", browseEwDataDir);
+  $("btn-ew-reset").addEventListener("click", resetEwDataDir);
 
   checkHealth();
   checkTranslateHealth();

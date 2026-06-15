@@ -34,6 +34,21 @@
         />
         <span id="translate-badge" class="badge badge-muted" title="Translate API health">…</span>
       </div>
+      <div id="ew-config" class="api-config ew-config hidden">
+        <label for="ew-data-dir" title="Folder containing Songs.db and SongWords.db">EW data</label>
+        <input
+          id="ew-data-dir"
+          type="text"
+          readonly
+          placeholder="default"
+          spellcheck="false"
+          autocomplete="off"
+          title="EasyWorship Data folder (Songs.db). Empty uses the built-in default."
+        />
+        <button id="btn-ew-browse" type="button">Browse…</button>
+        <button id="btn-ew-reset" type="button" title="Use built-in default folder">Default</button>
+        <span id="ew-data-badge" class="badge badge-muted" title="EW database folder">…</span>
+      </div>
     </header>
 
     <main class="layout">
@@ -124,6 +139,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=11" type="module"></script>
+    <script src="app.js?v=12" type="module"></script>
   </body>
 </html>

@@ -78,6 +78,26 @@ h2 {
   color: var(--text);
 }
 
+.ew-config input {
+  width: min(320px, 55vw);
+  cursor: default;
+}
+
+.ew-config button {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ew-config button:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 1fr 1fr;

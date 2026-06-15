@@ -6,7 +6,7 @@ from __future__ import annotations
 import http.server
 import json
 import socketserver
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from local_ew import capabilities, import_lyrics, parse_import_body
 
@@ -48,8 +48,11 @@ class LocalImportMixin:
         self.send_error(404)
 
     def _handle_local_get(self) -> bool:
-        if self._path() == "/local/capabilities":
-            self._send_json(200, capabilities())
+        parsed = urlparse(self.path)
+        if parsed.path == "/local/capabilities":
+            qs = parse_qs(parsed.query)
+            ew_dir = qs.get("ew_data_dir", [None])[0]
+            self._send_json(200, capabilities(ew_data_dir=ew_dir))
             return True
         return False
 
@@ -65,6 +68,7 @@ class LocalImportMixin:
             parsed["lyrics_plain"],
             title=parsed.get("title"),
             author=parsed.get("author"),
+            ew_data_dir=parsed.get("ew_data_dir"),
         )
         status = 200 if result.get("ok") else 502
         self._send_json(status, result)

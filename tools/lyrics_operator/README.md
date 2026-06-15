@@ -74,9 +74,7 @@ The **Translate** button inserts an English line under each non-English line and
 
 `desktop.py` opens the UI in a window and runs the import server on `:3000`.
 
-**Production default:** the app loads the cloud UI at `http://159.65.231.252/` (API/Translate
-auto-resolve to `/api` and `/translate` on that host). Override with `LYRICS_OPERATOR_UI_URL`
-for local dev (`http://127.0.0.1:3001/` while `serve_ui.py` is running).
+**Production default:** cloud UI at `PRODUCTION_UI_URL` in `desktop/desktop.py` (currently `http://159.65.231.252/`). No env var needed. For local dev, set `LYRICS_OPERATOR_LOCAL=1` and `LYRICS_OPERATOR_UI_URL=http://127.0.0.1:3001/`.
 
 ### Do you need to rebuild the exe?
 
@@ -86,19 +84,19 @@ for local dev (`http://127.0.0.1:3001/` while `serve_ui.py` is running).
 | UI changes served from the cloud (`http://159.65.231.252/`) | **No** — desktop loads the live UI from the server |
 | Import server / `desktop.py` / bundled local UI | **Yes** — rebuild the exe |
 
-If you already have an exe, you can keep using it with:
+If you already have an exe, rebuild once so it picks up `PRODUCTION_UI_URL` from code (no env var).
 
 ```powershell
-$env:LYRICS_OPERATOR_UI_URL = "http://159.65.231.252/"
 & "$env:USERPROFILE\projection\tools\lyrics_operator\desktop\dist\LyricsOperator\LyricsOperator.exe"
 ```
 
 After rebuilding once (below), double-clicking the exe uses the cloud URL by default — no env var.
 
-**Run from source** (`run-desktop.ps1`, handles `\\wsl$\` paths). Defaults to local UI for dev:
+**Run from source** (`run-desktop.ps1`). Cloud is the default; local dev only with `LYRICS_OPERATOR_LOCAL=1`:
 
 ```powershell
-$env:LYRICS_OPERATOR_UI_URL = "http://127.0.0.1:3001/"   # optional; omit to use cloud default
+$env:LYRICS_OPERATOR_LOCAL = "1"
+$env:LYRICS_OPERATOR_UI_URL = "http://127.0.0.1:3001/"
 & "\\wsl$\Ubuntu\home\mvn27adm\projection\tools\lyrics_operator\desktop\run-desktop.ps1"
 ```
 

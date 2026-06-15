@@ -40,23 +40,72 @@ def _load_songimport():
     return module
 
 
-def capabilities() -> dict[str, Any]:
+def default_ew_data_dir() -> str:
+    try:
+        return str(_load_songimport().EW_DATA_DIR)
+    except Exception:  # noqa: BLE001 - report via capabilities
+        return ""
+
+
+def resolve_ew_data_dir(ew_data_dir: str | None) -> str:
+    """User override or songimport default."""
+    chosen = (ew_data_dir or "").strip()
+    if chosen:
+        return chosen
+    return default_ew_data_dir()
+
+
+def check_ew_data_dir(ew_data_dir: str | None) -> dict[str, Any]:
+    """Validate a folder contains Songs.db and SongWords.db."""
+    path_str = resolve_ew_data_dir(ew_data_dir)
+    if not path_str:
+        return {
+            "path": "",
+            "valid": False,
+            "message": "EasyWorship data directory is not configured.",
+        }
+    try:
+        module = _load_songimport()
+        module.validate_data_dir(Path(path_str))
+        return {"path": path_str, "valid": True, "message": ""}
+    except ValueError as exc:
+        return {"path": path_str, "valid": False, "message": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        return {"path": path_str, "valid": False, "message": str(exc)}
+
+
+def capabilities(*, ew_data_dir: str | None = None) -> dict[str, Any]:
     platform = sys.platform
     if platform != "win32":
         return {
             "easyworship_import": False,
             "platform": platform,
             "reason": "EasyWorship import requires Windows.",
+            "default_ew_data_dir": "",
+            "ew_data_dir": "",
+            "ew_data_dir_valid": False,
+            "ew_data_dir_message": "",
         }
     if not SONGIMPORT_SCRIPT.is_file():
         return {
             "easyworship_import": False,
             "platform": platform,
             "reason": f"songimport.py not found at {SONGIMPORT_SCRIPT}",
+            "default_ew_data_dir": "",
+            "ew_data_dir": "",
+            "ew_data_dir_valid": False,
+            "ew_data_dir_message": "",
         }
+
+    default_dir = default_ew_data_dir()
+    ew_check = check_ew_data_dir(ew_data_dir)
     return {
         "easyworship_import": True,
         "platform": platform,
+        "default_ew_data_dir": default_dir,
+        "ew_data_dir": ew_check["path"],
+        "ew_data_dir_valid": ew_check["valid"],
+        "ew_data_dir_message": ew_check["message"],
     }
 
 
@@ -65,12 +114,19 @@ def import_lyrics(
     *,
     title: str | None = None,
     author: str | None = None,
+    ew_data_dir: str | None = None,
 ) -> dict[str, Any]:
-    caps = capabilities()
+    caps = capabilities(ew_data_dir=ew_data_dir)
     if not caps.get("easyworship_import"):
         return {
             "ok": False,
             "message": caps.get("reason", "Import not available."),
+            "output": "",
+        }
+    if not caps.get("ew_data_dir_valid"):
+        return {
+            "ok": False,
+            "message": caps.get("ew_data_dir_message") or "Invalid EasyWorship data directory.",
             "output": "",
         }
 
@@ -99,6 +155,9 @@ def import_lyrics(
             argv.extend(["--title", title.strip()])
         if author and author.strip():
             argv.extend(["--author", author.strip()])
+        data_dir = resolve_ew_data_dir(ew_data_dir)
+        if data_dir:
+            argv.extend(["--data-dir", data_dir])
 
         with _IMPORT_LOCK:
             module = _load_songimport()
@@ -155,13 +214,17 @@ def parse_import_body(raw: bytes) -> dict[str, Any] | tuple[int, str]:
 
     title = data.get("title")
     author = data.get("author")
+    ew_data_dir = data.get("ew_data_dir")
     if title is not None and not isinstance(title, str):
         return 400, "title must be a string."
     if author is not None and not isinstance(author, str):
         return 400, "author must be a string."
+    if ew_data_dir is not None and not isinstance(ew_data_dir, str):
+        return 400, "ew_data_dir must be a string."
 
     return {
         "lyrics_plain": lyrics_plain,
         "title": title,
         "author": author,
+        "ew_data_dir": ew_data_dir,
     }

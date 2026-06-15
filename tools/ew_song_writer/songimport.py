@@ -84,20 +84,21 @@ def get_db_paths(
     return songs_db, songwords_db
 
 
-def verify_databases_or_exit() -> Tuple[Path, Path]:
+def verify_databases_or_exit(data_dir: Path | None = None) -> Tuple[Path, Path]:
     """
     Print configured DB paths on every run; exit with error if missing.
     """
-    songs_db, songwords_db = get_db_paths()
+    root = data_dir or EW_DATA_DIR
+    songs_db, songwords_db = get_db_paths(root)
 
-    print(f"EasyWorship data directory (EW_DATA_DIR):\n  {EW_DATA_DIR}")
+    print(f"EasyWorship data directory (EW_DATA_DIR):\n  {root}")
     print(f"  Songs.db:     {songs_db}")
     print(f"  SongWords.db: {songwords_db}")
     print(f"Note: {EW_DATA_DIR_CONFIG_NOTE}")
 
     missing: List[Path] = []
-    if not EW_DATA_DIR.is_dir():
-        print(f"\nError: data directory not found:\n  {EW_DATA_DIR}")
+    if not root.is_dir():
+        print(f"\nError: data directory not found:\n  {root}")
         raise SystemExit(1)
     if not songs_db.is_file():
         missing.append(songs_db)
@@ -111,6 +112,18 @@ def verify_databases_or_exit() -> Tuple[Path, Path]:
         print(f"\n{EW_DATA_DIR_CONFIG_NOTE}")
         raise SystemExit(1)
 
+    return songs_db, songwords_db
+
+
+def validate_data_dir(data_dir: Path) -> Tuple[Path, Path]:
+    """Return Songs.db and SongWords.db paths or raise ValueError."""
+    songs_db, songwords_db = get_db_paths(data_dir)
+    if not data_dir.is_dir():
+        raise ValueError(f"Directory not found: {data_dir}")
+    missing = [p for p in (songs_db, songwords_db) if not p.is_file()]
+    if missing:
+        names = ", ".join(p.name for p in missing)
+        raise ValueError(f"Missing in {data_dir}: {names}")
     return songs_db, songwords_db
 
 
@@ -561,6 +574,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Song author (default: Unknown).",
     )
     parser.add_argument(
+        "--data-dir",
+        metavar="DIR",
+        type=Path,
+        help=f"EasyWorship Data folder containing Songs.db (default: {EW_DATA_DIR}).",
+    )
+    parser.add_argument(
         "--status",
         action="store_true",
         help="Print row counts and exit (no import).",
@@ -573,8 +592,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     verbose = args.verbose
+    data_dir = args.data_dir or EW_DATA_DIR
 
-    songs_db, songwords_db = verify_databases_or_exit()
+    songs_db, songwords_db = verify_databases_or_exit(data_dir)
 
     if args.status:
         log_database_state(songs_db, songwords_db)

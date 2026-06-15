@@ -3,7 +3,8 @@
 
   python desktop.py
 
-Default UI: http://159.65.231.252/ (cloud). Local dev:
+Default UI: PRODUCTION_UI_URL in desktop.py (cloud). Local dev:
+  set LYRICS_OPERATOR_LOCAL=1
   set LYRICS_OPERATOR_UI_URL=http://127.0.0.1:3001/
   python desktop.py
 """
@@ -33,14 +34,27 @@ except ImportError:
     print("  pip install -r requirements-desktop.txt")
     sys.exit(1)
 
-# Production UI served by Caddy on the droplet. Override with LYRICS_OPERATOR_UI_URL
-# for local dev (e.g. http://127.0.0.1:3001/ while serve_ui.py is running).
+# Cloud UI (Caddy on the droplet). Change this when the host/IP changes.
 PRODUCTION_UI_URL = "http://159.65.231.252/"
 
-DEFAULT_UI_URL = (
-    os.environ.get("LYRICS_OPERATOR_UI_URL", PRODUCTION_UI_URL).strip()
-    or PRODUCTION_UI_URL
-)
+# Printed at startup so you can confirm the exe was rebuilt (bump when desktop logic changes).
+DESKTOP_BUILD = "ew-data-dir-2026-06-13"
+
+# Local UI only when explicitly requested (serve_ui.py on :3001):
+#   set LYRICS_OPERATOR_LOCAL=1
+#   set LYRICS_OPERATOR_UI_URL=http://127.0.0.1:3001/
+_LOCAL_UI_URL = "http://127.0.0.1:3001/"
+
+
+def default_ui_url() -> str:
+    use_local = os.environ.get("LYRICS_OPERATOR_LOCAL", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if use_local:
+        return os.environ.get("LYRICS_OPERATOR_UI_URL", _LOCAL_UI_URL).strip() or _LOCAL_UI_URL
+    return PRODUCTION_UI_URL
 
 
 def ui_url_with_local_import(ui_url: str, local_import: str) -> str:
@@ -60,6 +74,14 @@ def _save_dialog_type():
     if file_dialog is not None and hasattr(file_dialog, "SAVE"):
         return file_dialog.SAVE
     return webview.SAVE_DIALOG
+
+
+def _folder_dialog_type():
+    """pywebview >= 5.4 uses FileDialog.FOLDER; older uses webview.FOLDER_DIALOG."""
+    file_dialog = getattr(webview, "FileDialog", None)
+    if file_dialog is not None and hasattr(file_dialog, "FOLDER"):
+        return file_dialog.FOLDER
+    return webview.FOLDER_DIALOG
 
 
 class DesktopApi:
@@ -87,16 +109,35 @@ class DesktopApi:
             webbrowser.open(url)
         return {"ok": True}
 
+    def pick_folder(self) -> dict:
+        windows = webview.windows
+        if not windows:
+            return {"ok": False, "message": "No window available."}
+        result = windows[0].create_file_dialog(_folder_dialog_type())
+        if not result:
+            return {"ok": False, "cancelled": True}
+        path = result[0] if isinstance(result, (list, tuple)) else result
+        return {"ok": True, "path": str(path)}
+
 
 def main() -> None:
-    ui_url = ui_url_with_local_import(DEFAULT_UI_URL, LOCAL_IMPORT_BASE)
+    use_local = os.environ.get("LYRICS_OPERATOR_LOCAL", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    ui_url = ui_url_with_local_import(default_ui_url(), LOCAL_IMPORT_BASE)
 
     threading.Thread(target=run_import_server, kwargs={"quiet": True}, daemon=True).start()
 
     print("Lyrics Operator desktop")
+    print(f"  Build:         {DESKTOP_BUILD}")
+    print(f"  UI mode:       {'local' if use_local else 'cloud'}")
     print(f"  UI:            {ui_url}")
     print(f"  Local import:  {LOCAL_IMPORT_BASE}")
     print("  Lyrics API:    set in the UI (auto /api on cloud; localhost:8000 for local dev)")
+    if use_local:
+        print("  (LYRICS_OPERATOR_LOCAL is set - unset it for cloud default)")
 
     webview.create_window(
         "Lyrics Operator",
